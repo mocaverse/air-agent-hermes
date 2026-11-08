@@ -1,0 +1,43 @@
+name: air-kya
+version: 0.2.0
+manifest_version: 2
+api_version: 1
+description: >
+  AIR Know-Your-Agent for Hermes, a port of mocaverse/air-kya's agent. The user delegates identity
+  to the agent in the AIR Console (device code, P-256 key, credentials.verify, no wallet signing);
+  the agent then enters KYA-gated stores with an SD-JWT presentation from AIR verify-by-agent.
+license: MIT
+homepage: https://github.com/mocaverse/air-kya
+tags: [identity, kya, air, moca, credentials]
+
+provides_tools:
+  - air_whoami
+  - kya_visit
+provides_hooks:
+  - pre_tool_call
+
+# All optional. Defaults match agent/air.ts SANDBOX; the delegation bundle's partnerId wins.
+optional_env:
+  - name: AIR_PARTNER_ID
+    description: "Partner for agent sessions when the bundle has none (default: AIR AI Studio sandbox)"
+  - name: AIR_CONSOLE_URL
+  - name: AIR_API_URL
+  - name: AIR_CREDENTIAL_API_URL
+  - name: AIR_KYA_AGENT_DIR
+    description: "Where the agent key and bundle live (default: this profile's plugin-data dir)"
+
+python_dependencies:
+  - "httpx>=0.27,<1"
+  - "cryptography>=42,<47"
+
+config_schema:
+  require_approval:
+    type: bool
+    default: true
+    label: "Ask before disclosing credentials"
+    description: "Each live kya_visit asks the user before AIR presents their claims."
+  mock_air_url:
+    type: str
+    default: "http://127.0.0.1:8799"
+    label: "Mock AIR URL"
+    description: "`npm run mock-air` from mocaverse/air-kya, used for mock-mode sites."
