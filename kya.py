@@ -71,10 +71,11 @@ def visit(site: str, *, http: httpx.Client, mock: str | None = None, env: air.Ai
         outcome = air.verify_by_agent(mock_air_url, f"mock-agent:{mock}", program_id=program_id,
                                       fields_to_disclose=fields, nonce=nonce, http=http)
         log(f"3 AIR (mock) verify-by-agent → {outcome['status']}")
+    elif delegation is None:
+        # Not delegated: nothing to present. Still enter as an agent and get the no-proof catalog.
+        outcome = {"status": "not_delegated", "sdJwt": None}
+        log("3 AIR        skipped: no delegation (run `hermes air login` for the verified catalog)")
     else:
-        if delegation is None:
-            raise VisitError("No delegation yet. Run `hermes air login` and approve it with your AIR account.",
-                             code="NOT_DELEGATED")
         token = air.session(env, delegation, http=http, log=lambda m: log(f"             ({m})"))
         outcome = air.verify_by_agent(env.credential_api_url, token, program_id=program_id,
                                       fields_to_disclose=fields, nonce=nonce, http=http)
@@ -92,6 +93,9 @@ def visit(site: str, *, http: httpx.Client, mock: str | None = None, env: air.Ai
     if outcome["sdJwt"]:
         result["disclosed"] = air.disclosed_names(outcome["sdJwt"])
         log(f"             discloses {', '.join(result['disclosed']) or 'nothing'}; nothing else leaves AIR")
+    elif outcome["status"] == "not_delegated":
+        result["note"] = ("Agent is not delegated, so it saw the catalog for unverified visitors. The user can run "
+                          "`hermes air login` in a terminal and approve in the AIR Console to unlock the verified catalog.")
     else:
         if outcome["status"] == "Compliant":
             result["note"] = "AIR said Compliant but returned no SD-JWT presentation; the site cannot act on a bare status."

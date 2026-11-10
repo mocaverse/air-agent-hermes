@@ -116,7 +116,10 @@ def cli_handler(args: argparse.Namespace) -> None:
             if quiet:
                 print(json.dumps(result.get("catalog")))
             else:
-                for p in (result.get("catalog") or {}).get("products", []):
+                cat = result.get("catalog") or {}
+                if cat.get("catalog"):
+                    print(f"             catalog: {cat['catalog']}")
+                for p in cat.get("products", []):
                     print(f"             {p['sku']:<19} {p['title']:<28} ${p['priceMinor'] / 100:.2f}")
         else:
             print("Usage: hermes air login [--name N] | whoami | logout | visit <siteUrl> [--mock <profile>] [--json]")

@@ -10,6 +10,12 @@ catalogs from one URL: **human** (no `X-AIR-KYA` header), **ineligible** (agent,
 failing), **eligible** (agent with a passing SD-JWT presentation). Only the claims the site asks
 for leave AIR (Demo Merch live asks only for `tier`).
 
+Demo Merch maps these to two catalogs: no passing proof (human or ineligible) → **Standard**;
+eligible → **VIP**. The JSON names it in `catalog`. Prices are in `priceMinor` (cents, USD).
+
+Use `kya_visit` for any catalog or price question about a KYA store, delegated or not, instead of
+fetching the page yourself: it always returns the catalog this agent is entitled to.
+
 ## Tools
 
 - `air_whoami`: read-only. Delegated or not, AIR user id, partner, Console.
@@ -29,7 +35,7 @@ for leave AIR (Demo Merch live asks only for `tier`).
 | `verification: Non-Compliant` or `reason: condition_not_met:*` | Credential found, rule not met (e.g. Silver) | Work with the limited catalog; say which condition |
 | other `reason` (`expired`, `untrusted_issuer`, `disclosure_mismatch`, `nonce_*`, …) | Site rejected the proof | Report the reason code; do not retry blindly |
 | `code: policy_not_configured` | Site setup incomplete (`missing` lists what) | Report it; nothing to fix agent-side |
-| `code: NOT_DELEGATED` | No delegation | Ask the user to run `hermes air login` in a terminal and approve in the AIR Console |
+| `verification: not_delegated` | Agent not delegated; it got the catalog for unverified visitors | Answer from that catalog, then tell the user that running `hermes air login` and approving in the AIR Console unlocks the verified catalog |
 | `agent/session 401/403` | Key revoked or replaced | Same: `hermes air login` again |
 | `retryable: true` (`CREDENTIAL_STORAGE_UNAVAILABLE`) | AIR storage outage | Retry once later; not the same as ineligible |
 | `MOCK_REQUIRED` / `MOCK_REJECTED` | Mode mismatch | Add or drop `mock_profile` |

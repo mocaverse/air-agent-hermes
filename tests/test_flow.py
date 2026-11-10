@@ -178,8 +178,6 @@ def test_not_found_sends_empty_header(store):
 
 def test_guards(store):
     http, _ = site_and_air()
-    with pytest.raises(VisitError, match="No delegation"):
-        visit(SITE, http=http)
     with pytest.raises(VisitError, match="live AIR issuer"):
         visit(SITE, http=http, mock="good")
     http, _ = site_and_air(environment="mock")
@@ -191,6 +189,13 @@ def test_guards(store):
     assert "header" not in seen
     with pytest.raises(VisitError):
         visit("http://not-local.example", http=http)
+
+
+def test_not_delegated_gets_unverified_catalog(store):
+    http, seen = site_and_air()
+    r = visit(SITE, http=http)
+    assert seen["header"] == "" and "sessions" not in seen and "verify" not in seen
+    assert r["viewer"] == "ineligible" and r["verification"] == "not_delegated" and "hermes air login" in r["note"]
 
 
 def test_mock_mode_uses_mock_air(store):
