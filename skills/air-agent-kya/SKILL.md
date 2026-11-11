@@ -1,9 +1,9 @@
 ---
-name: air-kya
-description: Use when a task needs an AIR KYA (Know-Your-Agent) gated store — one that publishes /.well-known/air-kya, like Demo Merch — to show the user's agent its agent catalog. Covers kya_visit, reading the viewer and reason, and what never to do with credentials.
+name: air-agent-kya
+description: Use when a task needs an AIR KYA (Know-Your-Agent) gated store — one that publishes /.well-known/air-kya, like Demo page — to show the user's agent its agent catalog. Covers kya_visit, reading the viewer and reason, and what never to do with credentials.
 ---
 
-# AIR KYA
+# AIR Agent KYA
 
 The user can delegate their AIR identity (Moca Network) to this agent. KYA stores serve three
 catalogs from one URL: **human** (no `X-AIR-KYA` header), **ineligible** (agent, proof missing or

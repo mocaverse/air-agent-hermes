@@ -1,4 +1,4 @@
-"""AIR client, ported from mocaverse/air-kya agent/air.ts.
+"""AIR Agent KYA: AIR client, ported from mocaverse/air-kya agent/air.ts.
 
   - delegation: AIR Console device-code grant binds a local P-256 key to the user's AIR account
   - session:    POST {airApi}/auth/agent/session, signed `${pubPem}:${userId}:${ts}`
@@ -36,7 +36,7 @@ BIND_SCOPES = ["openid", "credentials.read", "credentials.verify"]
 MERCHANT_SESSION_SCOPE = "openid credentials.verify"
 FULL_SESSION_SCOPE = "openid credentials.read credentials.verify"
 CLIENT_ID = "air-agent-broker"
-USER_AGENT = "air-kya-hermes/0.2"
+USER_AGENT = "air-agent-kya-hermes/0.1"
 
 KEY_FILE = "agent-key.pem"
 BUNDLE_FILE = "bundle.json"
@@ -58,33 +58,48 @@ class AirEnv:
     partner_id: str
 
 
-def air_env() -> AirEnv:
-    """Env vars override the sandbox defaults, same names as the Node agent."""
+def air_env(overrides: dict | None = None) -> AirEnv:
+    """Sandbox defaults, overridden by non-empty plugin settings (console_url, api_url, ...)."""
+    o = {k: v for k, v in (overrides or {}).items() if isinstance(v, str) and v.strip()}
     return AirEnv(
-        console_url=os.environ.get("AIR_CONSOLE_URL") or SANDBOX["console_url"],
-        air_api_url=os.environ.get("AIR_API_URL") or SANDBOX["air_api_url"],
-        credential_api_url=os.environ.get("AIR_CREDENTIAL_API_URL") or SANDBOX["credential_api_url"],
-        partner_id=os.environ.get("AIR_PARTNER_ID") or SANDBOX["partner_id"],
+        console_url=o.get("console_url") or SANDBOX["console_url"],
+        air_api_url=o.get("api_url") or SANDBOX["air_api_url"],
+        credential_api_url=o.get("credential_api_url") or SANDBOX["credential_api_url"],
+        partner_id=o.get("partner_id") or SANDBOX["partner_id"],
     )
 
 
 # --------------------------------------------------------------------------- storage
 
 
-def agent_dir() -> Path:
-    """AIR_KYA_AGENT_DIR, else the profile's Hermes plugin-data dir (survives plugin updates)."""
-    override = os.environ.get("AIR_KYA_AGENT_DIR")
+PLUGIN_ID = "air-agent-kya"
+LEGACY_ID = "air-kya"  # plugin name before the AIR Agent KYA rename; its delegation is carried over once
+
+
+def agent_dir(override: str | Path | None = None) -> Path:
+    """The `agent_dir` setting, else this profile's Hermes plugin-data dir (survives plugin updates)."""
     if override:
-        path = Path(override)
+        path = Path(override).expanduser()
     else:
         try:
             from plugins.plugin_storage import plugin_data_dir  # Hermes runtime
 
-            path = Path(plugin_data_dir("air-kya"))
+            path = Path(plugin_data_dir(PLUGIN_ID))
         except Exception:
-            path = Path.home() / ".hermes" / "plugin-data" / "air-kya"
+            path = Path.home() / ".hermes" / "plugin-data" / PLUGIN_ID
+        _migrate_legacy(path)
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     return path
+
+
+def _migrate_legacy(path: Path) -> None:
+    """Copy a delegation made under the old `air-kya` name, so renaming needs no new login."""
+    legacy = path.parent / LEGACY_ID
+    if (path / BUNDLE_FILE).exists() or not ((legacy / BUNDLE_FILE).exists() and (legacy / KEY_FILE).exists()):
+        return
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for name in (KEY_FILE, BUNDLE_FILE):
+        _write_private(path / name, (legacy / name).read_bytes())
 
 
 def _write_private(path: Path, data: bytes) -> None:

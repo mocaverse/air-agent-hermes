@@ -1,6 +1,6 @@
-"""Offline tests: AIR Console, AIR APIs and the Demo Merch Worker mocked with httpx.MockTransport.
+"""AIR Agent KYA offline tests: AIR Console, AIR APIs and the KYA demo site mocked with httpx.MockTransport.
 
-Run from the plugin's parent directory:  python -m pytest air-kya/tests -q
+Run from the repo root:  python -m pytest tests -q
 For the real Worker, see tests/e2e_local.py.
 """
 
@@ -17,12 +17,12 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("air_kya", ROOT / "__init__.py", submodule_search_locations=[str(ROOT)])
+spec = importlib.util.spec_from_file_location("air_agent_kya", ROOT / "__init__.py", submodule_search_locations=[str(ROOT)])
 pkg = importlib.util.module_from_spec(spec)
-sys.modules["air_kya"] = pkg
+sys.modules["air_agent_kya"] = pkg
 spec.loader.exec_module(pkg)
-from air_kya import air, tools  # noqa: E402
-from air_kya.kya import VisitError, visit  # noqa: E402
+from air_agent_kya import air, tools  # noqa: E402
+from air_agent_kya.kya import VisitError, visit  # noqa: E402
 
 SITE = "https://shop.example"
 USER = "018f9a2b-7c3d-7e10-9a4b-2c1d5e6f7a8b"
@@ -33,9 +33,9 @@ SDJWT = f"data:application/dc+sd-jwt,eyJiss.jwt~{DISC}~eyJkb.jwt"
 
 @pytest.fixture
 def store(tmp_path, monkeypatch):
-    monkeypatch.setenv("AIR_KYA_AGENT_DIR", str(tmp_path))
-    for v in ("AIR_PARTNER_ID", "AIR_CONSOLE_URL", "AIR_API_URL", "AIR_CREDENTIAL_API_URL"):
-        monkeypatch.delenv(v, raising=False)
+    """Plugin settings as Hermes would serve them; agent_dir points at a temp dir."""
+    settings = {"agent_dir": str(tmp_path)}
+    monkeypatch.setattr(tools, "setting", lambda key, default: settings.get(key, default))
     return tmp_path
 
 
@@ -233,4 +233,26 @@ def test_register_wires_everything(store):
 
     pkg.register(Ctx())
     names = {n for _, n in calls}
-    assert {"air_whoami", "kya_visit", "air", "pre_tool_call", "air-kya"} <= names
+    assert {"air_whoami", "kya_visit", "air", "pre_tool_call", "air-agent-kya"} <= names
+
+
+# ------------------------------------------------------------------ settings + rename
+
+
+def test_settings_override_endpoints():
+    env = air.air_env({"console_url": "https://agents.example", "partner_id": " ", "api_url": ""})
+    assert env.console_url == "https://agents.example"
+    assert env.partner_id == air.SANDBOX["partner_id"] and env.air_api_url == air.SANDBOX["air_api_url"]
+
+
+def test_legacy_delegation_migrates(tmp_path):
+    legacy, new = tmp_path / "air-kya", tmp_path / "air-agent-kya"
+    legacy.mkdir()
+    d = delegate(legacy)
+    air._migrate_legacy(new)
+    moved = air.load_delegation(new)
+    assert moved and moved.user_id == d.user_id
+    assert oct((new / air.KEY_FILE).stat().st_mode & 0o777) == "0o600"
+    (new / air.BUNDLE_FILE).write_text(json.dumps({"userId": "other"}))
+    air._migrate_legacy(new)  # never overwrites a newer delegation
+    assert json.loads((new / air.BUNDLE_FILE).read_text())["userId"] == "other"

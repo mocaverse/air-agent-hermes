@@ -1,4 +1,4 @@
-"""Site visit, ported from mocaverse/air-kya agent/cli.ts `visit`.
+"""AIR Agent KYA: site visit, ported from mocaverse/air-kya agent/cli.ts `visit`.
 
   1 GET  {site}/.well-known/air-kya       programId, fieldsToDisclose, environment, configured, issueUrl
   2 POST {site}/kya/challenge             one-time nonce (60 s), bound into the KB-JWT

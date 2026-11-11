@@ -1,0 +1,16 @@
+# Python (catalog rule 17: never commit bytecode)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Never commit an agent key or delegation bundle
+*.pem
+bundle.json
+
+# Local site checkout used by tests/e2e_local.py in CI
+site/
+
+.DS_Store
+*.zip

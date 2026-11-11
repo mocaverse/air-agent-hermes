@@ -1,0 +1,4 @@
+# Same ranges as plugin.yaml python_dependencies, plus the test runner.
+httpx>=0.27,<1
+cryptography>=42,<47
+pytest>=8,<9
