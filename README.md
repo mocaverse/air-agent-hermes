@@ -36,7 +36,7 @@ Login is deliberately terminal-only, so the model can never delegate itself.
 | `kya_visit` | `site`, optional `mock_profile` | Full KYA handshake, returns `viewer`, `reason`, `verification`, disclosed claim names and the catalog. Never returns the credential. Live sites trigger an approval prompt before AIR discloses |
 | `air_whoami` | — | Read-only delegation status |
 
-Example prompts: *"What does Demo Merch sell and at what prices? https://air-kya-demo-staging.0xmythril.workers.dev"*,
+Example prompts: *"What does Demo Merch sell and at what prices? https://kya.demo.air3.com"*,
 *"Check Demo Merch's catalog again."*
 
 ### Plugin management
@@ -62,9 +62,9 @@ hermes air --help
 
 ```bash
 # live sandbox (AIR account holding Gold Membership, SD-JWT)
-hermes air visit https://air-kya-demo-staging.0xmythril.workers.dev   # not delegated → Standard catalog
+hermes air visit https://kya.demo.air3.com   # not delegated → Standard catalog
 hermes air login                                                    # approve in the AIR Console
-hermes air visit https://air-kya-demo-staging.0xmythril.workers.dev   # → VIP catalog
+hermes air visit https://kya.demo.air3.com   # → VIP catalog
 
 # local mock (in mocaverse/air-kya: npm run dev + npm run mock-air)
 hermes air visit http://127.0.0.1:8787 --mock good        # eligible → VIP
