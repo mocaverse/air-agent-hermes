@@ -23,7 +23,7 @@ KYA_VISIT = {
     "parameters": {
         "type": "object",
         "properties": {
-            "site": {"type": "string", "description": "Site base URL, e.g. https://air-kya-demo-merch.0xmythril.workers.dev"},
+            "site": {"type": "string", "description": "Site base URL, e.g. https://air-kya-demo-staging.0xmythril.workers.dev"},
             "mock_profile": {
                 "type": "string",
                 "enum": MOCK_PROFILES,
