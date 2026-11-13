@@ -17,7 +17,7 @@ issuer and policies live in that repo.
 ## Install
 
 ```bash
-hermes plugins install mocaverse/air-agent-hermes --no-enable
+hermes plugins install MocaNetwork/air-agent-hermes --no-enable
 hermes plugins enable air-agent-kya          # asks you to approve the Python dependencies
 hermes air --help
 ```
@@ -110,6 +110,7 @@ sandbox (same defaults as `agent/air.ts`); the delegation bundle's `partnerId` w
 | Setting | Default |
 |---|---|
 | `require_approval` | `true`: ask before a live `kya_visit` discloses claims |
+| `allow_local_sites` | `false`: let `kya_visit` reach localhost sites outside mock mode (private and link-local addresses stay blocked) |
 | `partner_id` | AIR AI Studio sandbox partner `8ab60850-bdfa-4e48-8afa-d67a3d715224` |
 | `console_url` | `https://sandbox.agents.air3.com` |
 | `api_url` | `https://air.api.sandbox.air3.com/v2` |
@@ -124,7 +125,10 @@ What this plugin does that you may want to know before installing:
 - **Network calls:** the AIR Console (`sandbox.agents.air3.com`, during `hermes air login` only), the
   AIR API (`air.api.sandbox.air3.com`) and AIR credential API
   (`credential-testnet.api.sandbox.air3.com`), and each KYA site the agent visits
-  (`/.well-known/air-kya`, `/kya/challenge`, `/catalog`). https only; plain http only for localhost.
+  (`/.well-known/air-kya`, `/kya/challenge`, `/catalog`). https only, and only to public addresses:
+  each connection resolves the host, refuses private, loopback, link-local and cloud-metadata
+  addresses, and connects to the address it checked. Localhost (http or https) only in mock mode or
+  with `allow_local_sites`.
 - **Stored credentials:** a P-256 agent private key and the AIR delegation bundle, in the plugin's own
   plugin-data directory, mode 0600. `hermes air logout` deletes them; revoke the key in the AIR
   Console too.
@@ -175,7 +179,7 @@ python3 tests/e2e_local.py             # all 11 mock profiles against the real W
 ## Releasing
 
 1. Bump `version` in `plugin.yaml`, add a `CHANGELOG.md` entry, merge to `main` with CI green.
-2. Direct installs (`hermes plugins install mocaverse/air-agent-hermes`) pick it up on
+2. Direct installs (`hermes plugins install MocaNetwork/air-agent-hermes`) pick it up on
    `hermes plugins update air-agent-kya`.
 3. Hermes catalog: open a PR to `NousResearch/hermes-agent` bumping `sha` (full 40-char commit) and
    `version` in `plugin-catalog/air-agent-kya.yaml`. First listing: see `docs/catalog-entry.yaml`

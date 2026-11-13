@@ -8,7 +8,7 @@ import json
 import httpx
 
 from . import air
-from .kya import MOCK_PROFILES, VisitError, visit
+from .kya import MOCK_PROFILES, VisitError, site_client, visit
 
 DEFAULT_AGENT_LABEL = "Hermes (AIR Agent KYA)"
 ENV_SETTINGS = ("partner_id", "console_url", "api_url", "credential_api_url")
@@ -47,9 +47,14 @@ def _whoami() -> dict:
 
 
 def _run_visit(site: str, mock: str | None, log=lambda _: None) -> dict:
-    with httpx.Client(timeout=20.0, follow_redirects=False) as http:
-        return visit(site, http=http, mock=mock or None, env=_env(), delegation=air.load_delegation(_dir()),
-                     mock_air_url=setting("mock_air_url", air.MOCK_AIR_URL), log=log)
+    # The model picks `site`: those requests only reach public addresses (loopback too in mock mode or with
+    # allow_local_sites). AIR endpoints come from settings, so they keep a plain client.
+    allow_local = bool(mock) or bool(setting("allow_local_sites", False))
+    with httpx.Client(timeout=20.0, follow_redirects=False) as http, \
+            site_client(allow_local=allow_local) as site_http:
+        return visit(site, http=http, site_http=site_http, mock=mock or None, env=_env(),
+                     delegation=air.load_delegation(_dir()), mock_air_url=setting("mock_air_url", air.MOCK_AIR_URL),
+                     allow_local=allow_local, log=log)
 
 
 # --------------------------------------------------------------------------- tools

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- `kya_visit` only reaches sites on public addresses. Each site connection resolves the host, refuses
+  it unless every address is public (no private, loopback, link-local, CGNAT or cloud-metadata
+  addresses, IP literals included), and connects to the address it checked, so DNS rebinding can't
+  get around it. Site requests ignore proxy environment variables and don't follow redirects.
+- Localhost sites (http or https) work only in mock mode or with the new `allow_local_sites` setting
+  (default off). Plain http to localhost outside mock mode is no longer allowed by default.
+- `httpcore` is now a declared dependency (it was already pulled in by `httpx`).
+
 ## 0.1.0
 
 First release as **AIR Agent KYA**.

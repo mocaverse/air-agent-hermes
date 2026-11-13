@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs
 
+import httpcore
 import httpx
 import pytest
 from cryptography.hazmat.primitives import hashes, serialization
@@ -256,3 +257,96 @@ def test_legacy_delegation_migrates(tmp_path):
     (new / air.BUNDLE_FILE).write_text(json.dumps({"userId": "other"}))
     air._migrate_legacy(new)  # never overwrites a newer delegation
     assert json.loads((new / air.BUNDLE_FILE).read_text())["userId"] == "other"
+
+
+# ------------------------------------------------------------------ site address guard
+
+
+from air_agent_kya import kya  # noqa: E402
+
+
+def fake_resolver(table):
+    def resolve(host, port):
+        if host not in table:
+            raise OSError("no such host")
+        return table[host]
+    return resolve
+
+
+@pytest.mark.parametrize("url", [
+    "https://10.0.0.5", "https://172.16.0.1", "https://192.168.1.1", "https://169.254.169.254",
+    "https://127.0.0.1:8787", "https://[::1]", "https://[fc00::1]", "https://[fe80::1]", "https://0.0.0.0",
+    "https://[::ffff:127.0.0.1]", "https://100.64.0.1", "http://localhost:8787", "http://127.0.0.1:6379",
+])
+def test_site_base_refuses_local_literals(url):
+    with pytest.raises(VisitError) as exc:
+        kya.site_base(url)
+    assert exc.value.extra.get("code") == "SITE_NOT_PUBLIC"
+
+
+def test_site_base_allows_localhost_only_when_asked():
+    assert kya.site_base("http://127.0.0.1:8787", allow_local=True) == "http://127.0.0.1:8787"
+    assert kya.site_base("https://[::1]:8443", allow_local=True) == "https://[::1]:8443"
+    with pytest.raises(VisitError):  # local still means loopback, not the LAN or metadata
+        kya.site_base("https://169.254.169.254", allow_local=True)
+    with pytest.raises(VisitError):
+        kya.site_base("http://192.168.1.1", allow_local=True)
+    assert kya.site_base("https://93.184.215.14") == "https://93.184.215.14"
+
+
+def test_checked_addresses_requires_every_address_public():
+    resolve = fake_resolver({"shop.example": ["93.184.215.14"], "mixed.example": ["93.184.215.14", "10.0.0.7"],
+                             "meta.example": ["169.254.169.254"], "v6.example": ["2606:4700::1111"],
+                             "local.example": ["127.0.0.1"]})
+    assert kya.checked_addresses("shop.example", 443, resolve=resolve) == ["93.184.215.14"]
+    assert kya.checked_addresses("v6.example", 443, resolve=resolve) == ["2606:4700::1111"]
+    for host in ("mixed.example", "meta.example", "local.example"):
+        with pytest.raises(VisitError, match="non-public"):
+            kya.checked_addresses(host, 443, resolve=resolve)
+    assert kya.checked_addresses("local.example", 443, allow_local=True, resolve=resolve) == ["127.0.0.1"]
+    with pytest.raises(VisitError, match="Cannot resolve"):
+        kya.checked_addresses("nope.example", 443, resolve=resolve)
+
+
+class RecordingBackend(httpcore.NetworkBackend):
+    def __init__(self):
+        self.connected = []
+
+    def connect_tcp(self, host, port, timeout=None, local_address=None, socket_options=None):
+        self.connected.append((host, port))
+        raise httpcore.ConnectError("recorded")
+
+
+def test_backend_connects_to_checked_address_only():
+    answers = iter([["93.184.215.14"], ["127.0.0.1"]])  # second lookup "rebinds" to loopback
+    inner = RecordingBackend()
+    backend = kya.PublicOnlyBackend(resolve=lambda h, p: next(answers), inner=inner)
+    with pytest.raises(httpcore.ConnectError):
+        backend.connect_tcp("shop.example", 443)
+    assert inner.connected == [("93.184.215.14", 443)]  # the IP we checked, never the hostname
+    with pytest.raises(VisitError, match="non-public"):
+        backend.connect_tcp("shop.example", 443)
+    assert len(inner.connected) == 1
+    with pytest.raises(httpcore.ConnectError):
+        backend.connect_unix_socket("/var/run/docker.sock")
+
+
+def test_site_client_refuses_rebound_host_before_any_request():
+    with kya.site_client(resolve=fake_resolver({"shop.example": ["10.1.2.3"]})) as client:
+        with pytest.raises(VisitError, match="non-public"):
+            client.get("https://shop.example/.well-known/air-kya")
+
+
+def test_visit_uses_site_client_for_site_only(store):
+    http, seen = site_and_air()
+    with kya.site_client(resolve=fake_resolver({"shop.example": ["192.168.0.10"]})) as site_http:
+        with pytest.raises(VisitError, match="non-public"):
+            visit(SITE, http=http, site_http=site_http, delegation=delegate(store))
+    assert seen == {}  # refused before discovery, so AIR was never asked for a presentation
+
+
+def test_kya_visit_tool_refuses_private_site(store):
+    out = json.loads(tools.kya_visit({"site": "https://169.254.169.254"}))
+    assert out["code"] == "SITE_NOT_PUBLIC"
+    out = json.loads(tools.kya_visit({"site": "http://127.0.0.1:6379"}))
+    assert out["code"] == "SITE_NOT_PUBLIC"

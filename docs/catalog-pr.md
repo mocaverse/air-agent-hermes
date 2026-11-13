@@ -5,7 +5,7 @@
 **Body:**
 
 Adds `plugin-catalog/air-agent-kya.yaml`, pinned to `<sha>` of
-https://github.com/mocaverse/air-agent-hermes (submitted by the repository owner, rule 5).
+https://github.com/MocaNetwork/air-agent-hermes (submitted by the repository owner, rule 5).
 
 ### What it does
 Know-Your-Agent with AIR (Moca Network). The user delegates their AIR identity to Hermes once
@@ -22,13 +22,14 @@ returns the catalog that credential unlocks. Agents that aren't delegated get th
 - Slash command: `/air whoami` (`ctx.register_command`)
 - Skill: `air-agent-kya:air-agent-kya` (`ctx.register_skill`)
 - Storage: `plugin_data_dir("air-agent-kya")`
-- Settings: `config_schema` (endpoints, approval toggle); no `requires_env`, no secrets
+- Settings: `config_schema` (endpoints, approval toggle, `allow_local_sites`); no `requires_env`, no secrets
 
 ### Disclosures (rule 13)
 - **Network:** AIR Console `sandbox.agents.air3.com` (login only); AIR API `air.api.sandbox.air3.com`;
   AIR credential API `credential-testnet.api.sandbox.air3.com`; each KYA site the agent is asked to
-  visit (`GET /.well-known/air-kya`, `POST /kya/challenge`, `GET /catalog`). https only, except
-  localhost.
+  visit (`GET /.well-known/air-kya`, `POST /kya/challenge`, `GET /catalog`). https only, public
+  addresses only (resolved, checked and pinned per connection); localhost only in mock mode or with
+  `allow_local_sites`.
 - **Stored credentials:** P-256 agent private key + AIR delegation bundle in the plugin's own
   plugin-data dir, mode 0600; `hermes air logout` deletes them.
 - **Reads outside its data:** once, the old `air-kya` plugin-data dir, to carry over a delegation

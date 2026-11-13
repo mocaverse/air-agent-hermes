@@ -7,9 +7,9 @@ description: >
   (Moca Network) to the agent once in the AIR Console; the agent then enters Know-Your-Agent
   stores with a one-time SD-JWT presentation from AIR that discloses only the claims the store
   asks for, and gets the catalog that credential unlocks. Identity only, no wallet signing.
-author: mocaverse
+author: MocaNetwork
 license: MIT
-homepage: https://github.com/mocaverse/air-agent-hermes
+homepage: https://github.com/MocaNetwork/air-agent-hermes
 tags: [identity, kya, know-your-agent, air, moca, credentials, sd-jwt]
 requires_hermes: ">=0.23.0"
 
@@ -21,6 +21,7 @@ provides_hooks:
 
 python_dependencies:
   - "httpx>=0.27,<1"
+  - "httpcore>=1,<2"
   - "cryptography>=42,<47"
 
 # All optional. Empty endpoint settings use the AIR sandbox defaults from agent/air.ts.
@@ -30,6 +31,11 @@ config_schema:
     default: true
     label: "Ask before disclosing credentials"
     description: "Each live kya_visit asks you before AIR presents your claims to a site."
+  allow_local_sites:
+    type: bool
+    default: false
+    label: "Allow localhost sites"
+    description: "Let kya_visit reach sites on localhost (http or https) outside mock mode. Private and link-local addresses stay blocked."
   partner_id:
     type: str
     default: ""
