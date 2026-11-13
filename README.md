@@ -7,10 +7,6 @@ tier). The store checks it and returns the catalog your credential unlocks: publ
 everyone, VIP for verified members. You approve each disclosure, the agent never sees your
 credential, and it can't sign or spend.
 
-Native port of the agent in [mocaverse/air-kya](https://github.com/mocaverse/air-kya)
-(`agent/air.ts`, `agent/cli.ts`). Same protocol, endpoints and headers; the KYA demo site, mock
-issuer and policies live in that repo.
-
 - Plugin: `air-agent-kya` · Requires Hermes `>=0.23.0` · License: MIT
 - Demo store: https://kya.demo.air3.com
 
